@@ -32,6 +32,7 @@ class NetworkFaultInjector:
         be flipped
         :param fault_list_length: Length of the fault list
         """
+
         layer_parameters = [layer.count_params() for layer in self.network.layers]
         layer_probabilities = layer_parameters / np.sum(layer_parameters)
 
@@ -59,6 +60,8 @@ class NetworkFaultInjector:
         if incremental_index > len(self.fault_list):
             raise OutOfFaultList('The index of the incremental is larger than the dimension of the fault list')
 
+        print(f'Injecting {increment_number} faults')
+
         target_list = np.array(self.fault_list[self.index_last_injection: incremental_index])
         self.index_last_injection = incremental_index
 
@@ -84,3 +87,16 @@ class NetworkFaultInjector:
 
             # Update the weight with the faulty value
             self.network.layers[layer_index].set_weights((weights, bias))
+
+    def bit_flip_up_to(self, target_number):
+        """
+        Inject as many fault as need in order to reach the target number of faults in the network
+        :param target_number: Target number of fault to have in the network
+        """
+
+        increment = target_number - self.index_last_injection
+
+        if increment < 0:
+            raise OutOfFaultList('The number of fault desired is less than the number of faults already present in the network')
+
+        self.bit_flip_increment(increment)
