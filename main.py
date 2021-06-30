@@ -56,6 +56,8 @@ if __name__ == "__main__":
 
     vector_score_list = []
 
+    accuracy = 0
+
     for label_index, dir_name in enumerate(tqdm(os.listdir(input_dir))):
         for image_index, file_name in enumerate(os.listdir(f'{input_dir}/{dir_name}')):
 
@@ -65,9 +67,14 @@ if __name__ == "__main__":
             vector_score = vgg.predict(np.expand_dims(loaded_image, axis=0))
             prediction = np.argmax(vector_score)
 
+            if prediction == label_index:
+                accuracy = accuracy + 1
+
             vector_score_list.append(vector_score[0])
 
             # print(f'Target: {label_index}, Predicted: {prediction}')
+
+    print(f'Accuracy of {accuracy/10000}%')
 
     df = pd.DataFrame(np.array(vector_score_list))
     df.to_csv(f'{output_dir}/run_{seed}.csv')
