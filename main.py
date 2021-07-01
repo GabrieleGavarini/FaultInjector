@@ -36,8 +36,8 @@ def fault_injection_test_case():
 
 if __name__ == "__main__":
 
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
+    input_dir = sys.argv[1]     # Location of the dataset
+    output_dir = sys.argv[2]    # Where to store the dataframe
     seed = 113
     batch_size = 128
 
@@ -48,9 +48,9 @@ if __name__ == "__main__":
 
     fault_injector = NetworkFaultInjector(vgg, seed)
     fault_injector.generate_bit_flip_fault_list()
-    fault_injector.bit_flip_up_to(100)
+    # fault_injector.bit_flip_up_to(100)
 
     network_manager.run_and_export_cvs(run_name=f'run_{seed}',
-                                       output_dir=f'../{output_dir}',
+                                       output_dir=output_dir,
                                        pre_processing_function=preprocess_input)
 
