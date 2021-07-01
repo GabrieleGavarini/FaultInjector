@@ -1,5 +1,5 @@
 import numpy as np
-from FaultInjector import FaultInjector
+from FaultInjector.FaultInjector import FaultInjector
 
 
 class OutOfFaultList(Exception):

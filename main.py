@@ -1,16 +1,10 @@
 import sys
-import os
-
-from tqdm import tqdm
-
-import numpy as np
-import pandas as pd
 
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from ImageLoader import ImageLoader
-from NetworkFaultInjector import NetworkFaultInjector
+from FaultInjector.NetworkFaultInjector import NetworkFaultInjector
+from RunManager.NetworkManager import NetworkManager
 
 
 def fault_injection_test_case():
@@ -44,37 +38,19 @@ if __name__ == "__main__":
 
     input_dir = sys.argv[1]
     output_dir = sys.argv[2]
-    seed = 11234
+    seed = 113
     batch_size = 128
 
     vgg = VGG16()
     vgg.compile(metrics=['accuracy'])
 
+    network_manager = NetworkManager(network=vgg, dataset_dir=input_dir)
+
     fault_injector = NetworkFaultInjector(vgg, seed)
     fault_injector.generate_bit_flip_fault_list()
     fault_injector.bit_flip_up_to(100)
 
-    vector_score_list = []
+    network_manager.run_and_export_cvs(run_name=f'run_{seed}',
+                                       output_dir=f'../{output_dir}',
+                                       pre_processing_function=preprocess_input)
 
-    accuracy = 0
-
-    for label_index, dir_name in enumerate(tqdm(os.listdir(input_dir))):
-        for image_index, file_name in enumerate(os.listdir(f'{input_dir}/{dir_name}')):
-
-            loaded_image = ImageLoader.load_resize_center(f'{input_dir}/{dir_name}/{file_name}')
-            loaded_image = preprocess_input(loaded_image)
-
-            vector_score = vgg.predict(np.expand_dims(loaded_image, axis=0))
-            prediction = np.argmax(vector_score)
-
-            if prediction == label_index:
-                accuracy = accuracy + 1
-
-            vector_score_list.append(vector_score[0])
-
-            # print(f'Target: {label_index}, Predicted: {prediction}')
-
-    print(f'Accuracy of {accuracy/10000}%')
-
-    df = pd.DataFrame(np.array(vector_score_list))
-    df.to_csv(f'{output_dir}/run_{seed}.csv')
