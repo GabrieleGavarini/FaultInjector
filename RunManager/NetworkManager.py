@@ -18,6 +18,9 @@ class NetworkManager:
 
         vector_score_list = {}
 
+        n = 0
+        t = 0
+
         for label_index, dir_name in enumerate(tqdm(os.listdir(self.dataset_dir))):
             for image_index, file_name in enumerate(os.listdir(f'{self.dataset_dir}/{dir_name}')):
 
@@ -27,6 +30,14 @@ class NetworkManager:
                     loaded_image = pre_processing_function(loaded_image)
 
                 vector_score_list[file_name] = list(self.network.predict(np.expand_dims(loaded_image, axis=0))[0])
+
+                prediction = np.argmax(vector_score_list[file_name])
+                if prediction == label_index:
+                    n += 1
+                t += 1
+
+        accuracy = n/t
+        print(accuracy)
 
         df = pd.DataFrame.from_dict(vector_score_list, orient='index')
         df.to_csv(f'{output_dir}/{run_name}.csv')

@@ -1,5 +1,4 @@
 import numpy as np
-from FaultInjector.FaultInjector import FaultInjector
 
 
 class OutOfFaultList(Exception):
@@ -17,43 +16,44 @@ class NetworkFaultInjector:
         self.network = network
         self.seed = seed
 
-        self.rng = np.random.default_rng(seed=self.seed)    # The dedicated random number generator
+        self.rng = np.random.default_rng(seed=self.seed)  # The dedicated random number generator
 
         self.layer_shape = [(layer.get_weights()[0].shape if (len(layer.get_weights()) > 0) else ())
-                            for layer in self.network.layers]   # List of the shape of all layers
+                            for layer in self.network.layers]  # List of the shape of all layers
 
-        self.fault_list = []           # The list containing all the fault generated for this run
+        self.fault_list = []  # The list containing all the fault generated for this run
         self.index_last_injection = 0  # The fault list index of the last fault injected
 
-    def generate_bit_flip_fault_list(self, fault_list_length=10000):
+    def generate_layer_probability(self, fault_list_length):
         """
-        Generate and set the fault list. Each entry of the fault list is a list of three elements: the first element is
-        the index of the layer, the second is a tuple containing the index of the weight, the last element is the bit to
-        be flipped
-        :param fault_list_length: Length of the fault list
+        Helper function that generate a list of fault_list_length layers to be injected with a fault with a probability
+        directly proportional to the number of parameters in that layer. The number of occurrences of a layer in the
+        list is equal to the fault to be injected in that layer.
+        :param fault_list_length: The number of layers to select
+        :return: A list of layers sampled with repetition from all the network layers.
         """
 
+        # Compute the probability of each layer to be selected
         layer_parameters = [layer.count_params() for layer in self.network.layers]
         layer_probabilities = layer_parameters / np.sum(layer_parameters)
 
-        # Generate the probability for the layer based on the number of parameters
+        # Sample with repetition from all the layers of the network
         target_layers = self.rng.choice(len(layer_probabilities),
                                         size=fault_list_length,
                                         replace=True,
                                         p=layer_probabilities)
 
-        # For each layer selected, generate an injection index and a target bit
-        for layer_index in target_layers:
-            injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
-            self.fault_list.append([layer_index, injection_index, self.rng.integers(0, 32)])
+        return target_layers
 
-    def bit_flip_increment(self, increment_number):
+    def inject_incremental_fault_with_function(self, increment_number, layer_fault_injection_function):
         """
         Inject new faults on top of those already present in the network. Fault injections are done layer by layer (i.e.
         we cycle trough all the layer and for each one of them we inject the corresponding fault from the incremental
-        fault list). The update of the network weights is done once per layer.
+        fault list). The update of the network weights is done once per layer using layer_fault_injection_function.
         :param increment_number: The number of faults to inject on top of those already present
-        :return:
+        :param layer_fault_injection_function: The function called to perform the fault injection on the layer. Takes as
+        parameters an array containing the weights of the layer, a list of fault to be injected in that layer and the
+        number of faults to be injected
         """
 
         incremental_index = self.index_last_injection + increment_number
@@ -76,27 +76,31 @@ class NetworkFaultInjector:
             weights = self.network.layers[layer_index].get_weights()[0]
             bias = self.network.layers[layer_index].get_weights()[1]
 
-            for i in np.arange(0, layer_count):
-                # Get the index of the weight to inject
-                injection_index = fault_for_layer[i][1]
-                # Get which bit to flip
-                injection_position = fault_for_layer[i][2]
-                # Perform the fault injection
-                weights[injection_index] = FaultInjector.float32_bit_flip(float_number=weights[injection_index],
-                                                                          position=injection_position)
+            # Call the function that performs layer count faults in the current layer
+            layer_fault_injection_function(weights, fault_for_layer, layer_count)
 
             # Update the weight with the faulty value
             self.network.layers[layer_index].set_weights((weights, bias))
 
-    def bit_flip_up_to(self, target_number):
+    def compute_increment(self, target_number):
         """
-        Inject as many fault as need in order to reach the target number of faults in the network
-        :param target_number: Target number of fault to have in the network
+        Compute the number of fault needed to reach the target_number number of faults and throws an OutOfFaultList
+        exception if it is not possible.
+        :param target_number: The target number of faults required to be injected in the network.
+        :return: The number of faults need to reach the target_number.
         """
-
         increment = target_number - self.index_last_injection
 
         if increment < 0:
-            raise OutOfFaultList('The number of fault desired is less than the number of faults already present in the network')
+            raise OutOfFaultList(
+                'The number of fault desired is less than the number of faults already present in the network')
+        return increment
 
-        self.bit_flip_increment(increment)
+    def generate_fault_list(self, fault_list_length):
+        raise NotImplementedError()
+
+    def inject_incremental_fault(self, increment_number):
+        raise NotImplementedError()
+
+    def inject_up_to(self, target_number):
+        raise NotImplementedError()
