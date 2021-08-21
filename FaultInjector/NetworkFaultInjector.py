@@ -1,4 +1,11 @@
+import pickle
+import re
+
 import numpy as np
+
+
+class EmptyFaultList(Exception):
+    pass
 
 
 class OutOfFaultList(Exception):
@@ -44,6 +51,28 @@ class NetworkFaultInjector:
                                         p=layer_probabilities)
 
         return target_layers
+
+    def save_fault_list(self, folder_path):
+        """
+        Save the fault list as a pickle file
+        :param folder_path: where to save the fault_list
+        """
+
+        if len(self.fault_list) == 0:
+            raise EmptyFaultList('Impossible to save an empty fault list. Generate a fault list first.')
+
+        with open(f'{folder_path}/fault_list_{self.seed:d}.pkl', 'wb') as file:
+            pickle.dump(self.fault_list, file)
+
+    def load_fault_list(self, folder_path):
+        """
+        Load a fault list saved from a pickle file in folder folder_path that uses the seed used when creating this
+        class. The file_name must be formatted as fault_list_[{%09d}].pkl
+        :param folder_path: path where the fault_list is saved
+        :return:
+        """
+        with open(f'{folder_path}/fault_list_{self.seed:d}.pkl', 'rb') as file:
+            self.fault_list = pickle.load(file)
 
     def inject_incremental_fault_with_function(self, increment_number, layer_fault_injection_function):
         """
@@ -104,3 +133,20 @@ class NetworkFaultInjector:
 
     def inject_up_to(self, target_number):
         raise NotImplementedError()
+
+    def fault_injection_campaign(self, number_of_faults, folder_path):
+        """
+        Perform a fault injection campaign for the current network, injecting up to number_of_faults faults. The fault
+        list is generated if the corresponding pickle file it is not found in the folder_path.
+        :param number_of_faults: how many fault to have in the network
+        :param folder_path: path to the folder containing the pickle file, if it exists
+        """
+
+        # Load the fault list if it exists, otherwise generate it
+        try:
+            self.load_fault_list(folder_path)
+        except FileNotFoundError:
+            self.generate_fault_list()
+
+        # Inject the faults
+        self.inject_up_to(number_of_faults)

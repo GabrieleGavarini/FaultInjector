@@ -1,57 +1,34 @@
 import sys
 
 from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from FaultInjector.BitFlipFaultInjector import BitFlipFaultInjector
 from FaultInjector.StuckAtFaultInjector import StuckAtFaultInjector
 from RunManager.NetworkManager import NetworkManager
-
-
-def fault_injection_test_case(fault_injector):
-    fault_0 = fault_injector.fault_list[0]  # Should change after 1st injection
-    fault_1000 = fault_injector.fault_list[1000]  # Should change after 2nd injection
-    fault_1999 = fault_injector.fault_list[1999]  # Should change after 2nd injection
-    fault_2000 = fault_injector.fault_list[2000]  # Should not change
-
-    print(f'Value of 0 before the injection: {vgg.layers[fault_0[0]].get_weights()[0][fault_0[1]]}')
-    print(f'Value of 1000 before the injection: {vgg.layers[fault_1000[0]].get_weights()[0][fault_1000[1]]}')
-    print(f'Value of 1999 before the injection: {vgg.layers[fault_1999[0]].get_weights()[0][fault_1999[1]]}')
-    print(f'Value of 2000 before the injection: {vgg.layers[fault_2000[0]].get_weights()[0][fault_2000[1]]}')
-    print('\n')
-
-    fault_injector.inject_incremental_fault(1000)
-    print(f'Value of 0 after injection #{1}: {vgg.layers[fault_0[0]].get_weights()[0][fault_0[1]]}  <-')
-    print(f'Value of 1000 after injection #{1}: {vgg.layers[fault_1000[0]].get_weights()[0][fault_1000[1]]}')
-    print(f'Value of 1999 after injection #{1}: {vgg.layers[fault_1999[0]].get_weights()[0][fault_1999[1]]}')
-    print(f'Value of 2000 after injection #{1}: {vgg.layers[fault_2000[0]].get_weights()[0][fault_2000[1]]}')
-    print('\n')
-
-    fault_injector.inject_up_to(2000)
-    print(f'Value of 0 after injection #{2}: {vgg.layers[fault_0[0]].get_weights()[0][fault_0[1]]}')
-    print(f'Value of 1000 after injection #{2}: {vgg.layers[fault_1000[0]].get_weights()[0][fault_1000[1]]} <-')
-    print(f'Value of 1999 after injection #{2}: {vgg.layers[fault_1999[0]].get_weights()[0][fault_1999[1]]} <-')
-    print(f'Value of 2000 after injection #{2}: {vgg.layers[fault_2000[0]].get_weights()[0][fault_2000[1]]}')
-    print('\n')
-
 
 if __name__ == "__main__":
 
     input_dir = sys.argv[1]     # Location of the dataset
     output_dir = sys.argv[2]    # Where to store the dataframe
-    seed = 113
     batch_size = 128
 
-    vgg = VGG16()
-    vgg.compile(metrics=['accuracy'])
+    seed_1 = 113
+    seed_2 = 127
 
-    network_manager = NetworkManager(network=vgg, dataset_dir=input_dir)
+    vgg_1 = VGG16()
+    vgg_1.compile(metrics=['accuracy'])
+    network_manager_1 = NetworkManager(network=vgg_1, dataset_dir=input_dir)
+    fault_injector_1 = StuckAtFaultInjector(vgg_1, seed_1)
+    fault_injector_1.fault_injection_campaign(1000, 'FaultList')
+    network_manager_1.run_and_export_cvs(run_name=f'vgg_imagenet_{seed_1}_inference_result.csv',
+                                         output_dir='FaultyRunResults',
+                                         pre_processing_function=preprocess_input)
 
-    print('Testing stuck-at fault injector \n')
-    stuck_at_fault_injector = StuckAtFaultInjector(vgg, seed)
-    stuck_at_fault_injector.generate_fault_list()
-    fault_injection_test_case(stuck_at_fault_injector)
-
-    print('Testing bit-flip fault injector \n')
-    stuck_at_fault_injector = BitFlipFaultInjector(vgg, seed)
-    stuck_at_fault_injector.generate_fault_list()
-    fault_injection_test_case(stuck_at_fault_injector)
+    vgg_2 = VGG16()
+    vgg_2.compile(metrics=['accuracy'])
+    network_manager_2 = NetworkManager(network=vgg_2, dataset_dir=input_dir)
+    fault_injector_2 = StuckAtFaultInjector(vgg_2, seed_2)
+    fault_injector_2.fault_injection_campaign(1000, 'FaultList')
+    network_manager_2.run_and_export_cvs(run_name=f'vgg_imagenet_{seed_2}_inference_result.csv',
+                                         output_dir='FaultyRunResults',
+                                         pre_processing_function=preprocess_input)
