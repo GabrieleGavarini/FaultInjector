@@ -21,9 +21,13 @@ class StuckAtFaultInjector(NetworkFaultInjector):
 
         # For each layer selected, generate an injection index and a target bit
         for layer_index in target_layers:
-            injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
-            stuck_at_value = self.rng.integers(0, 1, endpoint=True)
-            self.fault_list.append([layer_index, injection_index, self.rng.integers(0, 32), stuck_at_value])
+            while True:
+                injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
+                stuck_at_value = self.rng.integers(0, 1, endpoint=True)
+                fault_list_element = [layer_index, injection_index, self.rng.integers(0, 32), stuck_at_value]
+                if fault_list_element not in self.fault_list:
+                    break
+            self.fault_list.append(fault_list_element)
 
     def inject_incremental_fault(self, increment_number):
         """

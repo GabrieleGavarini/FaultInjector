@@ -1,5 +1,4 @@
 import pickle
-import re
 
 import numpy as np
 
@@ -105,7 +104,7 @@ class NetworkFaultInjector:
             weights = self.network.layers[layer_index].get_weights()[0]
             bias = self.network.layers[layer_index].get_weights()[1]
 
-            # Call the function that performs layer count faults in the current layer
+            # Call the function that inject layer_count faults in the current layer
             layer_fault_injection_function(weights, fault_for_layer, layer_count)
 
             # Update the weight with the faulty value
@@ -134,19 +133,21 @@ class NetworkFaultInjector:
     def inject_up_to(self, target_number):
         raise NotImplementedError()
 
-    def fault_injection_campaign(self, number_of_faults, folder_path):
+    def fault_injection_campaign(self, number_of_faults, folder_path, fault_list_length=10000):
         """
         Perform a fault injection campaign for the current network, injecting up to number_of_faults faults. The fault
         list is generated if the corresponding pickle file it is not found in the folder_path.
         :param number_of_faults: how many fault to have in the network
         :param folder_path: path to the folder containing the pickle file, if it exists
+        :param fault_list_length: the length of the fault list
         """
 
         # Load the fault list if it exists, otherwise generate it
         try:
             self.load_fault_list(folder_path)
         except FileNotFoundError:
-            self.generate_fault_list()
+            self.generate_fault_list(fault_list_length)
+            self.save_fault_list()
 
         # Inject the faults
         self.inject_up_to(number_of_faults)
