@@ -8,27 +8,39 @@ from RunManager.NetworkManager import NetworkManager
 
 if __name__ == "__main__":
 
-    input_dir = sys.argv[1]     # Location of the dataset
-    output_dir = sys.argv[2]    # Where to store the dataframe
+    input_dir = sys.argv[1]  # Location of the dataset
     batch_size = 128
 
-    seed_1 = 113
-    seed_2 = 127
+    top_n = 5
+    output_format = 'pickle'
+    number_of_faults = 1000
 
-    vgg_1 = VGG16()
-    vgg_1.compile(metrics=['accuracy'])
-    network_manager_1 = NetworkManager(network=vgg_1, dataset_dir=input_dir)
-    fault_injector_1 = StuckAtFaultInjector(vgg_1, seed_1)
-    fault_injector_1.fault_injection_campaign(1000, 'FaultList')
-    network_manager_1.run_and_export_cvs(run_name=f'vgg_imagenet_{seed_1}_inference_result.csv',
-                                         output_dir='FaultyRunResults',
-                                         pre_processing_function=preprocess_input)
+    seed_list = [113, 127]
 
-    vgg_2 = VGG16()
-    vgg_2.compile(metrics=['accuracy'])
-    network_manager_2 = NetworkManager(network=vgg_2, dataset_dir=input_dir)
-    fault_injector_2 = StuckAtFaultInjector(vgg_2, seed_2)
-    fault_injector_2.fault_injection_campaign(1000, 'FaultList')
-    network_manager_2.run_and_export_cvs(run_name=f'vgg_imagenet_{seed_2}_inference_result.csv',
-                                         output_dir='FaultyRunResults',
-                                         pre_processing_function=preprocess_input)
+    # STEP 1 - Golden Run
+    # 1.1 - Create the network
+    vgg = VGG16(classifier_activation=None)
+    vgg.compile(metrics=['accuracy'])
+    # 1.2 - Initialize the network manager
+    network_manager = NetworkManager(network=vgg, dataset_dir=input_dir)
+    # 1.3 - Execute the golden run
+    network_manager.run_and_export(run_name=f'vgg_imagenet_inference_result',
+                                   output_dir='GoldenRunResults',
+                                   top_n=top_n,
+                                   output_format=output_format,
+                                   pre_processing_function=preprocess_input)
+
+    # STEP 2 - Faulty Run
+    for seed in seed_list:
+        # 2.1 - reset the network to its original state (i.e. load the original weights)
+        network_manager.reset_network()
+        # 2.2 - Initialize the fault injector
+        fault_injector = StuckAtFaultInjector(vgg, seed)
+        # 2.3 - Generate a fault list and perform a fault injection campaign
+        fault_injector.fault_injection_campaign(number_of_faults=number_of_faults, folder_path='FaultList')
+        # 2.4 - Execute a faulty run
+        network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}_inference_result',
+                                       output_dir='FaultyRunResults',
+                                       top_n=top_n,
+                                       output_format=output_format,
+                                       pre_processing_function=preprocess_input)

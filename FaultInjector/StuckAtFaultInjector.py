@@ -1,5 +1,5 @@
 from FaultInjector.NetworkFaultInjector import NetworkFaultInjector
-from FaultInjector.FaultInjector import FaultInjector
+from FaultInjector.FaultInjectorEngine import FaultInjectorEngine
 
 import numpy as np
 
@@ -41,9 +41,9 @@ class StuckAtFaultInjector(NetworkFaultInjector):
                 # Get target value
                 stuck_at_value = fault_list[i][3]
                 # Perform the fault injection
-                weights[injection_index] = FaultInjector.float32_stuck_at(float_number=weights[injection_index],
-                                                                          position=injection_position,
-                                                                          stuck_at_value=stuck_at_value)
+                weights[injection_index] = FaultInjectorEngine.float32_stuck_at(float_number=weights[injection_index],
+                                                                                position=injection_position,
+                                                                                stuck_at_value=stuck_at_value)
 
         super().inject_incremental_fault_with_function(increment_number, fault_injection)
 

@@ -1,5 +1,5 @@
 from FaultInjector.NetworkFaultInjector import NetworkFaultInjector
-from FaultInjector.FaultInjector import FaultInjector
+from FaultInjector.FaultInjectorEngine import FaultInjectorEngine
 
 import numpy as np
 
@@ -38,8 +38,8 @@ class BitFlipFaultInjector(NetworkFaultInjector):
                 # Get which bit to flip
                 injection_position = fault_list[i][2]
                 # Perform the fault injection
-                weights[injection_index] = FaultInjector.float32_bit_flip(float_number=weights[injection_index],
-                                                                          position=injection_position)
+                weights[injection_index] = FaultInjectorEngine.float32_bit_flip(float_number=weights[injection_index],
+                                                                                position=injection_position)
 
         super().inject_incremental_fault_with_function(increment_number, fault_injection)
 

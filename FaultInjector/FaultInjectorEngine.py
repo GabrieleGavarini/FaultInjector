@@ -1,7 +1,7 @@
 import struct
 
 
-class FaultInjector:
+class FaultInjectorEngine:
 
     @staticmethod
     def float32_stuck_at(float_number, position, stuck_at_value):
