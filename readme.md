@@ -32,7 +32,7 @@ After that, we initialize the network manager over VGG-16. When we create this i
 
     network_manager = NetworkManager(network=vgg, dataset_dir=input_dir)
 
-At this point we can execute the **golden run**, using the function provided by the network manager. In this case we are specifying that we want to save the vector scores as a csv file and that we are interested only in the top-n elements of the scores. 
+At this point we can execute the **golden run**, using the function provided by the network manager. In this case we are specifying that we want to save the vector scores into an output_format file and that we are interested only in the top-n elements of the scores. 
 
     network_manager.run_and_export(run_name=f'vgg_imagenet_inference_result',
                                    output_dir='GoldenRunResults',

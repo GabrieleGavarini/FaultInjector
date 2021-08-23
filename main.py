@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     top_n = 5
     output_format = 'pickle'
-    number_of_faults = 1000
+    number_of_faults_list = [100, 200, 500]
 
     seed_list = [113, 127]
 
@@ -36,10 +36,11 @@ if __name__ == "__main__":
         network_manager.reset_network()
         # 2.2 - Initialize the fault injector
         fault_injector = StuckAtFaultInjector(vgg, seed)
-        # 2.3 - Generate a fault list and perform a fault injection campaign
-        fault_injector.fault_injection_campaign(number_of_faults=number_of_faults,
-                                                folder_path='FaultList',
-                                                fault_list_length=10000)
+        # 2.3 - Generate a fault list and perform a fault injection campaign for the number of faults in the list
+        for number_of_faults in number_of_faults_list:
+            fault_injector.fault_injection_campaign(number_of_faults=number_of_faults,
+                                                    folder_path='FaultList',
+                                                    fault_list_length=10000)
         # 2.4 - Execute a faulty run
         network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}_inference_result',
                                        output_dir='FaultyRunResults',

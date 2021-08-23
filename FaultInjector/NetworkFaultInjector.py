@@ -142,12 +142,14 @@ class NetworkFaultInjector:
         :param fault_list_length: the length of the fault list
         """
 
-        # Load the fault list if it exists, otherwise generate it
-        try:
-            self.load_fault_list(folder_path)
-        except FileNotFoundError:
-            self.generate_fault_list(fault_list_length)
-            self.save_fault_list(folder_path)
+        # Check if the fault list is empty. If it is, load the fault list form a file if it exists, otherwise
+        # generate it
+        if len(self.fault_list) == 0:
+            try:
+                self.load_fault_list(folder_path)
+            except FileNotFoundError:
+                self.generate_fault_list(fault_list_length)
+                self.save_fault_list(folder_path)
 
         # Inject the faults
         self.inject_up_to(number_of_faults)
