@@ -41,9 +41,9 @@ if __name__ == "__main__":
             fault_injector.fault_injection_campaign(number_of_faults=number_of_faults,
                                                     folder_path='FaultList',
                                                     fault_list_length=10000)
-        # 2.4 - Execute a faulty run
-        network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}_inference_result',
-                                       output_dir='FaultyRunResults',
-                                       top_n=top_n,
-                                       output_format=output_format,
-                                       pre_processing_function=preprocess_input)
+            # 2.4 - Execute a faulty run
+            network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}_inference_result',
+                                           output_dir='FaultyRunResults',
+                                           top_n=top_n,
+                                           output_format=output_format,
+                                           pre_processing_function=preprocess_input)
