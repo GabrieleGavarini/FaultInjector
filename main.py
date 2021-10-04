@@ -5,10 +5,12 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 
 from FaultInjector.StuckAtFaultInjector import StuckAtFaultInjector
 from RunManager.NetworkManager import NetworkManager
+from RunManager.Baseline import Baseline
 
 if __name__ == "__main__":
 
-    input_dir = sys.argv[1]  # Location of the dataset
+    input_dir = sys.argv[1] # Location of the dataset
+    mav_dir = sys.argv[2]   # Location of the mav file
     batch_size = 128
 
     top_n = 5
@@ -23,10 +25,16 @@ if __name__ == "__main__":
     vgg.compile(metrics=['accuracy'])
     # 1.2 - Initialize the network manager
     network_manager = NetworkManager(network=vgg, dataset_dir=input_dir)
+
+    baseline = Baseline(network=vgg, dataset_dir=input_dir)
+    open_max_activation_vectors = baseline.compute_mean_activation_vectors(file_location=mav_dir,
+                                                                          pre_processing_function=preprocess_input)
+
     # 1.3 - Execute the golden run
     network_manager.run_and_export(run_name=f'vgg_imagenet_inference_result',
                                    output_dir='GoldenRunResults',
                                    top_n=top_n,
+                                   open_max_activation_vectors=open_max_activation_vectors,
                                    output_format=output_format,
                                    pre_processing_function=preprocess_input)
 
