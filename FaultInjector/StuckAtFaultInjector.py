@@ -22,9 +22,21 @@ class StuckAtFaultInjector(NetworkFaultInjector):
         # For each layer selected, generate an injection index and a target bit
         for layer_index in target_layers:
             while True:
-                injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
+                # Get the probability of a fault affecting the bias versus the weights
+                total_layer_params = self.network.layers[layer_index].get_weights()[0].size +\
+                                     self.network.layers[layer_index].get_weights()[1].size
+                weights_probability = self.network.layers[layer_index].get_weights()[0].size / total_layer_params
+                # bias_or_weights = self.rng.choice([0, 1], p=[weights_probability, 1 - weights_probability])
+                bias_or_weights = self.rng.choice([0, 1])
+                # Where to inject the fault
+                if bias_or_weights == 0:
+                    injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
+                else:
+                    injection_index = tuple([self.rng.integers(self.network.layers[layer_index].get_weights()[1].size)])
+                # Value to inject
                 stuck_at_value = self.rng.integers(0, 1, endpoint=True)
-                fault_list_element = [layer_index, injection_index, self.rng.integers(0, 32), stuck_at_value]
+                # Compose the fault details in a list
+                fault_list_element = [layer_index, bias_or_weights, injection_index, self.rng.integers(0, 32), stuck_at_value]
                 if fault_list_element not in self.fault_list:
                     break
             self.fault_list.append(fault_list_element)
@@ -36,18 +48,25 @@ class StuckAtFaultInjector(NetworkFaultInjector):
         fault list). The update of the network weights is done once per layer.
         :param increment_number: The number of faults to inject on top of those already present
         """
-        def fault_injection(weights, fault_list, layer_count):
+        def fault_injection(weights, bias, fault_list, layer_count):
             for i in np.arange(0, layer_count):
+                # Get whether to inject a bias or a weight
+                bias_or_weights = fault_list[i][1]
                 # Get the index of the weight to inject
-                injection_index = fault_list[i][1]
+                injection_index = fault_list[i][2]
                 # Get which bit to change
-                injection_position = fault_list[i][2]
+                injection_position = fault_list[i][3]
                 # Get target value
-                stuck_at_value = fault_list[i][3]
+                stuck_at_value = fault_list[i][4]
                 # Perform the fault injection
-                weights[injection_index] = FaultInjectorEngine.float32_stuck_at(float_number=weights[injection_index],
-                                                                                position=injection_position,
-                                                                                stuck_at_value=stuck_at_value)
+                if bias_or_weights == 0:    # Inject into the weights
+                    weights[injection_index] = FaultInjectorEngine.float32_stuck_at(float_number=weights[injection_index],
+                                                                                    position=injection_position,
+                                                                                    stuck_at_value=stuck_at_value)
+                else:   # Inject into Biases
+                    bias[injection_index] = FaultInjectorEngine.float32_stuck_at(float_number=bias[injection_index],
+                                                                                 position=injection_position,
+                                                                                 stuck_at_value=stuck_at_value)
 
         super().inject_incremental_fault_with_function(increment_number, fault_injection)
 
