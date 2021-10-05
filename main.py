@@ -5,7 +5,10 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 
 from FaultInjector.StuckAtFaultInjector import StuckAtFaultInjector
 from RunManager.NetworkManager import NetworkManager
-from RunManager.Baseline import Baseline
+
+from FaultDetector.FaultDetectorMetrics import FaultDetectorMetrics
+from FaultDetector.ScoreBasedFaultDetector import ScoreBasedFaultDetector
+from FaultDetector.FaultDetectorEvaluator import FaultDetectorEvaluator
 
 if __name__ == "__main__":
 
@@ -17,7 +20,9 @@ if __name__ == "__main__":
     detection_dir = sys.argv[2]
 
     # mav_dir: where to load/save the file containing the mean activation vector for the detection dataset.
+    # threshold_dir: where to load/save the file containing the threshold for the detection dataset.
     mav_file_location = sys.argv[3]
+    threshold_file_location = sys.argv[4]
 
     batch_size = 128
 
@@ -35,11 +40,14 @@ if __name__ == "__main__":
     # 1.2 - Initialize the network manager
     network_manager = NetworkManager(network=vgg, dataset_dir=testing_dir)
 
-    baseline = Baseline(network=vgg, dataset_dir=detection_dir)
-    open_max_activation_vectors = baseline.compute_mean_activation_vectors(file_location=mav_file_location,
-                                                                           pre_processing_function=preprocess_input)
+    # 1.3 - Initialize the fault detector metrics
+    metrics = FaultDetectorMetrics(network=vgg, dataset_dir=detection_dir)
+    open_max_activation_vectors = metrics.compute_mean_activation_vectors(file_location=mav_file_location,
+                                                                          pre_processing_function=preprocess_input)
+    score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
+                                                                  pre_processing_function=preprocess_input)
 
-    # 1.3 - Execute the golden run
+    # 1.4 - Execute the golden run
     network_manager.run_and_export(run_name=f'vgg_imagenet',
                                    output_dir='GoldenRunResults',
                                    top_n=top_n,
@@ -60,10 +68,20 @@ if __name__ == "__main__":
                                                     folder_path='FaultList',
                                                     fault_list_length=100)
             # 2.4 - Execute a faulty run
-            network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}',
-                                           output_dir='FaultyRunResults',
-                                           top_n=top_n,
-                                           open_max_activation_vectors=open_max_activation_vectors,
-                                           compute_sdc_metrics=True,
-                                           output_format=output_format,
-                                           pre_processing_function=preprocess_input)
+            inference_results = network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}',
+                                                               output_dir='FaultyRunResults',
+                                                               top_n=top_n,
+                                                               open_max_activation_vectors=open_max_activation_vectors,
+                                                               compute_sdc_metrics=True,
+                                                               output_format=output_format,
+                                                               pre_processing_function=preprocess_input)
+
+            # 2.5 - Initialize the fault detector
+            score_based_fault_detector = ScoreBasedFaultDetector(inference_result=inference_results,
+                                                                 threshold=score_based_threshold)
+
+            # 2.6 - Run the fault detector
+            score_based_fault_detector_results = score_based_fault_detector.detect_faults()
+
+            # 2.7 - Evaluate the performance of the fault detector
+            FaultDetectorEvaluator.evaluate_fault_detector(score_based_fault_detector_results, inference_results)
