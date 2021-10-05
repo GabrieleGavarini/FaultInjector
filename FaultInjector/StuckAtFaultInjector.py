@@ -26,8 +26,7 @@ class StuckAtFaultInjector(NetworkFaultInjector):
                 total_layer_params = self.network.layers[layer_index].get_weights()[0].size +\
                                      self.network.layers[layer_index].get_weights()[1].size
                 weights_probability = self.network.layers[layer_index].get_weights()[0].size / total_layer_params
-                # bias_or_weights = self.rng.choice([0, 1], p=[weights_probability, 1 - weights_probability])
-                bias_or_weights = self.rng.choice([0, 1])
+                bias_or_weights = self.rng.choice([0, 1], p=[weights_probability, 1 - weights_probability])
                 # Where to inject the fault
                 if bias_or_weights == 0:
                     injection_index = tuple([self.rng.integers(0, i) for i in self.layer_shape[layer_index]])
