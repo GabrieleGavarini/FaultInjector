@@ -8,6 +8,7 @@ from RunManager.NetworkManager import NetworkManager
 
 from FaultDetector.FaultDetectorMetrics import FaultDetectorMetrics
 from FaultDetector.ScoreBasedFaultDetector import ScoreBasedFaultDetector
+from FaultDetector.MavFaultDetector import MavFaultDetector
 from FaultDetector.FaultDetectorEvaluator import FaultDetectorEvaluator
 
 if __name__ == "__main__":
@@ -42,12 +43,16 @@ if __name__ == "__main__":
 
     # 1.3 - Initialize the fault detector metrics
     metrics = FaultDetectorMetrics(network=vgg, dataset_dir=detection_dir)
-    open_max_activation_vectors = metrics.compute_mean_activation_vectors(file_location=mav_file_location,
+    open_max_activation_vectors = metrics.compute_mean_activation_vectors(file_location=f'{mav_file_location}/mav.pkl',
                                                                           pre_processing_function=preprocess_input)
+    open_max_threshold = metrics.compute_mav_distance(mav=open_max_activation_vectors,
+                                                      file_location=f'{mav_file_location}/distance.pkl',
+                                                      pre_processing_function=preprocess_input)
     score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
                                                                   pre_processing_function=preprocess_input)
 
     # 1.4 - Execute the golden run
+    print(f'Starting golden run... \n')
     network_manager.run_and_export(run_name=f'vgg_imagenet',
                                    output_dir='GoldenRunResults',
                                    top_n=top_n,
@@ -67,7 +72,9 @@ if __name__ == "__main__":
             fault_injector.fault_injection_campaign(number_of_faults=number_of_faults,
                                                     folder_path='FaultList',
                                                     fault_list_length=100)
+
             # 2.4 - Execute a faulty run
+            print(f'Starting faulty run {seed}_{number_of_faults}... \n')
             inference_results = network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}',
                                                                output_dir='FaultyRunResults',
                                                                top_n=top_n,
@@ -79,9 +86,10 @@ if __name__ == "__main__":
             # 2.5 - Initialize the fault detector
             score_based_fault_detector = ScoreBasedFaultDetector(inference_result=inference_results,
                                                                  threshold=score_based_threshold)
+            # mav_fault_detector = MavFaultDetector(inference_result=inference_results)
 
             # 2.6 - Run the fault detector
             score_based_fault_detector_results = score_based_fault_detector.detect_faults()
 
             # 2.7 - Evaluate the performance of the fault detector
-            FaultDetectorEvaluator.evaluate_fault_detector(score_based_fault_detector_results, inference_results)
+            score_based_evaluation = FaultDetectorEvaluator.evaluate_fault_detector(score_based_fault_detector_results, inference_results)

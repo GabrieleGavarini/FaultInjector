@@ -1,0 +1,2 @@
+class NoValidFormatException(Exception):
+    pass

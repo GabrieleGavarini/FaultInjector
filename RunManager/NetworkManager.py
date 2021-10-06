@@ -2,14 +2,12 @@ import os
 
 from tqdm import tqdm
 
+from scipy import special
 import numpy as np
 import pandas as pd
 
 from RunManager.ImageLoader import ImageLoader
-
-
-class NoValidFormatException(Exception):
-    pass
+from Util.NoValidFormatException import NoValidFormatException
 
 
 class NetworkManager:
@@ -39,7 +37,10 @@ class NetworkManager:
         :return: sdc-n
         """
         for n in range(1, n + 1):
-            return self.golden_results[f'top_{n}_index'].loc[entry_name] == top_1_index
+            if self.golden_results[f'top_{n}_index'].loc[entry_name] == top_1_index:
+                return False
+
+        return True
 
     def compute_sdc_n_percent(self, n, entry_name, top_1, den):
         """
@@ -51,8 +52,12 @@ class NetworkManager:
         :return: True if the top-1_f prediction of the faulty run belongs to the interval [top-1_g-n%: top-1_g+n%]
         """
         golden_top_1_after_sm = np.exp(self.golden_results.top_1.loc[entry_name]) / self.golden_results.den.loc[entry_name]
-        current_top_1_after_sm = np.exp(top_1) / den
-        return (current_top_1_after_sm >= golden_top_1_after_sm - n) and (current_top_1_after_sm <= golden_top_1_after_sm + n)
+        try:
+            current_top_1_after_sm = np.exp(top_1) / den
+        except RuntimeWarning:
+            current_top_1_after_sm = 0
+
+        return ~((current_top_1_after_sm >= golden_top_1_after_sm - n) and (current_top_1_after_sm <= golden_top_1_after_sm + n))
 
     def compute_sdc_metrics(self, vector_score, entry_name):
         """
@@ -64,23 +69,27 @@ class NetworkManager:
         # Compute sdc-1
         top_1_index = np.argsort(vector_score)[::-1][0]
         top_1 = vector_score[top_1_index]
-        den = sum(np.exp(vector_score))
+        try:
+            den = sum(np.exp(vector_score))
+        except RuntimeWarning:
+            den = np.inf
+
         sdc_metrics_entry = {'sdc-1': self.compute_sdc_n(1, entry_name, top_1_index),
-                             'sdc-5': False,
-                             'sdc-10%': False,
-                             'sdc-20%': False}
-        if sdc_metrics_entry['sdc-1']:
-            # If sdc-1 is true, also sdc-5 is true
-            sdc_metrics_entry['sdc-5'] = True
+                             'sdc-5': True,
+                             'sdc-10%': True,
+                             'sdc-20%': True}
+        if not sdc_metrics_entry['sdc-1']:
+            # If sdc-1 is false, also sdc-5 is false
+            sdc_metrics_entry['sdc-5'] = False
             # Compute sdc-10%
             sdc_metrics_entry['sdc-10%'] = self.compute_sdc_n_percent(0.1,
                                                                       entry_name,
                                                                       top_1=top_1,
                                                                       den=den
                                                                       )
-            if sdc_metrics_entry['sdc-10%']:
+            if not sdc_metrics_entry['sdc-10%']:
                 # If sdc-10% is ture, then also sdc-20% is true
-                sdc_metrics_entry['sdc-20%'] = True
+                sdc_metrics_entry['sdc-20%'] = False
             else:
                 # Compute sdc-20%
                 sdc_metrics_entry['sdc-20%'] = self.compute_sdc_n_percent(0.2,
@@ -88,7 +97,7 @@ class NetworkManager:
                                                                           top_1=top_1,
                                                                           den=den
                                                                           )
-        # If sdc-1 is false, sdc-n% are meaningless
+        # If sdc-1 is true, sdc-n% are meaningless
         else:
             # Compute sdc-5
             sdc_metrics_entry['sdc-5'] = self.compute_sdc_n(5, entry_name, top_1_index)
@@ -145,7 +154,7 @@ class NetworkManager:
 
                 if open_max_activation_vectors is not None:
                     # Compute the distance between the mav and the vector score (computed after the softmax)
-                    distance = open_max_activation_vectors[dir_name] - np.exp(vector_score)/sum(np.exp(vector_score))
+                    distance = open_max_activation_vectors[dir_name] - special.softmax(vector_score)
                     open_max_distance[file_name] = np.linalg.norm(distance)
 
                 if compute_sdc_metrics:

@@ -26,8 +26,8 @@ class FaultDetectorMetrics:
         """
 
         try:
-            mean_activation_vectors = pickle.load(open(file_location, 'rb'))
-            return mean_activation_vectors
+            threshold = pickle.load(open(file_location, 'rb'))
+            return threshold
         except (OSError, IOError):
             threshold = 0
 
@@ -93,3 +93,39 @@ class FaultDetectorMetrics:
 
             pickle.dump(mean_activation_vectors, open(file_location, 'wb'))
             return mean_activation_vectors
+
+    def compute_mav_distance(self, mav, pre_processing_function=None, file_location=None):
+        # TODO: this function returns the wrong distance (should be 0 in this case). Possibly the problem is in the
+        # computation of the mav
+        """
+
+        :param pre_processing_function:
+        :param file_location:
+        :return:
+        """
+
+        try:
+            threshold = pickle.load(open(file_location, 'rb'))
+            return threshold
+        except (OSError, IOError):
+            threshold = 0
+
+            for label_index, dir_name in enumerate(tqdm(os.listdir(self.dataset_dir))):
+                for image_index, file_name in enumerate(os.listdir(f'{self.dataset_dir}/{dir_name}')):
+
+                    # Load the image, resize it and perform a center crop
+                    loaded_image = ImageLoader.load_resize_center(f'{self.dataset_dir}/{dir_name}/{file_name}')
+
+                    # Pre-process the image if a function has been specified
+                    if pre_processing_function is not None:
+                        loaded_image = pre_processing_function(loaded_image)
+
+                    # Compute the vector score
+                    vector_score = list(self.network.predict(np.expand_dims(loaded_image, axis=0))[0])
+
+                    # If the maximum of the vector score is bigger than the previous threshold update the threshold
+                    distance = np.linalg.norm(mav[f'{dir_name}'] - vector_score)
+                    threshold = max(threshold, distance)
+
+            pickle.dump(threshold, open(file_location, 'wb'))
+            return threshold
