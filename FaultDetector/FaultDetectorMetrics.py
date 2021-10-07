@@ -94,13 +94,13 @@ class FaultDetectorMetrics:
             pickle.dump(mean_activation_vectors, open(file_location, 'wb'))
             return mean_activation_vectors
 
-    def compute_mav_distance(self, mav, pre_processing_function=None, file_location=None):
-        # TODO: this function returns the wrong distance (should be 0 in this case). Possibly the problem is in the
-        # computation of the mav
+    def compute_mav_distance_threshold(self, mav, pre_processing_function=None, file_location=None):
         """
-
-        :param pre_processing_function:
-        :param file_location:
+        Compute the distance from the mav for the given dataset.
+        :param mav: the mean activation vectors
+        :param pre_processing_function: Pre-processing function to apply to the dataset.
+        :param file_location: Either None or a string. If not None, it is the location where to save/load the file
+        containing the MAV threshold.
         :return:
         """
 
