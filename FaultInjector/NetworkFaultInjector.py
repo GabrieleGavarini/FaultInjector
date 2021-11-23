@@ -60,7 +60,7 @@ class NetworkFaultInjector:
         if len(self.fault_list) == 0:
             raise EmptyFaultList('Impossible to save an empty fault list. Generate a fault list first.')
 
-        with open(f'{folder_path}/fault_list_{self.seed:d}.pkl', 'wb') as file:
+        with open(f'{folder_path}/fault_list_{self.seed:06d}.pkl', 'wb') as file:
             pickle.dump(self.fault_list, file)
 
     def load_fault_list(self, folder_path):
@@ -70,7 +70,7 @@ class NetworkFaultInjector:
         :param folder_path: path where the fault_list is saved
         :return:
         """
-        with open(f'{folder_path}/fault_list_{self.seed:d}.pkl', 'rb') as file:
+        with open(f'{folder_path}/fault_list_{self.seed:06d}.pkl', 'rb') as file:
             self.fault_list = pickle.load(file)
 
     def inject_incremental_fault_with_function(self, increment_number, layer_fault_injection_function):
