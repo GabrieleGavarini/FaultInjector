@@ -105,7 +105,7 @@ class NetworkFaultInjector:
             bias = self.network.layers[layer_index].get_weights()[1]
 
             # Call the function that inject layer_count faults in the current layer
-            layer_fault_injection_function(weights, fault_for_layer, layer_count)
+            layer_fault_injection_function(weights, bias, fault_for_layer, layer_count)
 
             # Update the weight with the faulty value
             self.network.layers[layer_index].set_weights((weights, bias))
