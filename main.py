@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -23,16 +24,20 @@ if __name__ == "__main__":
     # mav_dir: where to load/save the file containing the mean activation vector for the detection dataset.
     # threshold_dir: where to load/save the file containing the threshold for the detection dataset.
     mav_file_location = sys.argv[3]
-    threshold_file_location = sys.argv[4]
+    # threshold_file_location = sys.argv[4]
+
+    number_of_experiments = 1000
 
     batch_size = 128
 
     top_n = 5
     output_format = 'pickle'
-    # number_of_faults_list = [100, 200, 500]
-    number_of_faults_list = [100]
+    number_of_faults_list = [25, 50, 75, 100, 125]
 
-    seed_list = [224, 113, 127]
+    generator_seed = 1234
+    generator = np.random.default_rng(generator_seed)
+
+    seed_list = generator.choice(np.arange(np.iinfo(int).max), size=number_of_experiments, replace=False)
 
     # STEP 1 - Golden Run
     # 1.1 - Create the network
@@ -45,11 +50,11 @@ if __name__ == "__main__":
     metrics = FaultDetectorMetrics(network=vgg, dataset_dir=detection_dir)
     open_max_activation_vectors = metrics.compute_mean_activation_vectors(file_location=f'{mav_file_location}/mav.pkl',
                                                                           pre_processing_function=preprocess_input)
-    open_max_threshold = metrics.compute_mav_distance_threshold(mav=open_max_activation_vectors,
-                                                                file_location=f'{mav_file_location}/distance.pkl',
-                                                                pre_processing_function=preprocess_input)
-    score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
-                                                                  pre_processing_function=preprocess_input)
+    # open_max_threshold = metrics.compute_mav_distance_threshold(mav=open_max_activation_vectors,
+    #                                                             file_location=f'{mav_file_location}/distance.pkl',
+    #                                                             pre_processing_function=preprocess_input)
+    # score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
+    #                                                               pre_processing_function=preprocess_input)
 
     # 1.4 - Execute the golden run
     print(f'Starting golden run... \n')
@@ -84,23 +89,23 @@ if __name__ == "__main__":
                                                                pre_processing_function=preprocess_input)
 
             # 2.5 - Initialize the fault detectors
-            score_based_fault_detector = ScoreBasedFaultDetector(inference_result=inference_results,
-                                                                 threshold=score_based_threshold)
-            mav_fault_detector = MavFaultDetector(inference_result=inference_results,
-                                                  threshold=open_max_threshold)
+            # score_based_fault_detector = ScoreBasedFaultDetector(inference_result=inference_results,
+            #                                                      threshold=score_based_threshold)
+            # mav_fault_detector = MavFaultDetector(inference_result=inference_results,
+            #                                       threshold=open_max_threshold)
 
             # 2.6 - Run the fault detectors
-            score_based_fault_detector_results = score_based_fault_detector.detect_faults()
-            mav_fault_detector_results = mav_fault_detector.detect_faults()
+            # score_based_fault_detector_results = score_based_fault_detector.detect_faults()
+            # mav_fault_detector_results = mav_fault_detector.detect_faults()
 
             # 2.7 - Evaluate the performance of the fault detectors
-            score_based_evaluation = FaultDetectorEvaluator.evaluate_and_export_fault_detector(
-                fault_detector_dict=score_based_fault_detector_results,
-                run_sdc=inference_results,
-                file_name=f'vgg_imagenet_{seed}_{number_of_faults}_score_based',
-                output_dir='FaultDetectorResults')
-            mav_evaluation = FaultDetectorEvaluator.evaluate_and_export_fault_detector(
-                fault_detector_dict=mav_fault_detector_results,
-                run_sdc=inference_results,
-                file_name=f'vgg_imagenet_{seed}_{number_of_faults}_mav',
-                output_dir='FaultDetectorResults')
+            # score_based_evaluation = FaultDetectorEvaluator.evaluate_and_export_fault_detector(
+            #     fault_detector_dict=score_based_fault_detector_results,
+            #     run_sdc=inference_results,
+            #     file_name=f'vgg_imagenet_{seed}_{number_of_faults}_score_based',
+            #     output_dir='FaultDetectorResults')
+            # mav_evaluation = FaultDetectorEvaluator.evaluate_and_export_fault_detector(
+            #     fault_detector_dict=mav_fault_detector_results,
+            #     run_sdc=inference_results,
+            #     file_name=f'vgg_imagenet_{seed}_{number_of_faults}_mav',
+            #     output_dir='FaultDetectorResults')
