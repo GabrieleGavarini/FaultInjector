@@ -37,7 +37,7 @@ if __name__ == "__main__":
     generator_seed = 1234
     generator = np.random.default_rng(generator_seed)
 
-    seed_list = generator.choice(np.arange(np.iinfo(int).max), size=number_of_experiments, replace=False)
+    seed_list = generator.choice(int(10e6), size=number_of_experiments, replace=False)
 
     # STEP 1 - Golden Run
     # 1.1 - Create the network
