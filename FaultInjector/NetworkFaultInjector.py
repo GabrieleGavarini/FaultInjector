@@ -148,6 +148,7 @@ class NetworkFaultInjector:
             try:
                 self.load_fault_list(folder_path)
             except FileNotFoundError:
+                print('Generating a new fault list\n')
                 self.generate_fault_list(fault_list_length)
                 self.save_fault_list(folder_path)
 
