@@ -33,6 +33,7 @@ if __name__ == "__main__":
     top_n = 5
     output_format = 'pickle'
     number_of_faults_list = [25, 50, 75, 100, 125]
+    max_fault_list_length = 1000
 
     generator_seed = 1234
     generator = np.random.default_rng(generator_seed)
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         for number_of_faults in number_of_faults_list:
             fault_injector.fault_injection_campaign(number_of_faults=number_of_faults,
                                                     folder_path='FaultList',
-                                                    fault_list_length=100)
+                                                    fault_list_length=max_fault_list_length)
 
             # 2.4 - Execute a faulty run
             print(f'Starting faulty run {seed}_{number_of_faults}... \n')
