@@ -1,4 +1,5 @@
 import pandas as pd
+from tqdm import tqdm
 
 from Util.NoValidFormatException import NoValidFormatException
 
@@ -7,13 +8,13 @@ class FaultDetectorEvaluator:
 
     @staticmethod
     def confusion_matrix(actual_value, predicted_value):
-        if actual_value is True:
-            if predicted_value is True:
+        if actual_value:
+            if predicted_value:
                 return 'TP'
             else:
                 return 'FN'
         else:
-            if predicted_value is True:
+            if predicted_value:
                 return 'FP'
             else:
                 return 'TN'
@@ -30,7 +31,7 @@ class FaultDetectorEvaluator:
         evaluation_df = pd.DataFrame(columns=['sdc-1', 'sdc-5', 'sdc-10%', 'sdc-20%'])
         results = {}
 
-        for index, row in run_sdc.iterrows():
+        for index, row in tqdm(run_sdc.iterrows(), total=len(run_sdc)):
             sdc_1 = FaultDetectorEvaluator.confusion_matrix(row['sdc-1'], fault_detector_dict[index])
             sdc_5 = FaultDetectorEvaluator.confusion_matrix(row['sdc-5'], fault_detector_dict[index])
             sdc_10_percent = FaultDetectorEvaluator.confusion_matrix(row['sdc-10%'], fault_detector_dict[index])
@@ -69,3 +70,27 @@ class FaultDetectorEvaluator:
             raise NoValidFormatException
 
         return evaluation_df
+
+    @staticmethod
+    def get_metrics(evaluation_df, value_if_zero=1, metric='sdc-1'):
+        tp = len(evaluation_df[evaluation_df[metric] == 'TP'])
+        fp = len(evaluation_df[evaluation_df[metric] == 'FP'])
+        tn = len(evaluation_df[evaluation_df[metric] == 'TN'])
+        fn = len(evaluation_df[evaluation_df[metric] == 'FN'])
+
+        accuracy = (tp + tn) / (tp + tn + fp + fn)
+        precision = tp / (tp + fp) if not (tp + fp) == 0 else value_if_zero
+        recall = tp / (tp + fn) if not (tp + fn) == 0 else value_if_zero
+
+        fpr = fp / (fp + tn) if not (fp + tn) == 0 else value_if_zero
+        tpr = 1 - fpr
+        fnr = fn / (fn + tp) if not (fn + tp) == 0 else value_if_zero
+        tnr = 1 - fnr
+
+        return [accuracy,
+                precision,
+                recall,
+                fpr,
+                tpr,
+                fnr,
+                tnr]

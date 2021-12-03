@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 class MavFaultDetector:
 
     def __init__(self, inference_result, threshold):
@@ -11,7 +13,7 @@ class MavFaultDetector:
         """
         # TODO: complete this function
         fault_detected = {}
-        for index, row in self.inference_result.iterrows():
+        for index, row in tqdm(self.inference_result.iterrows(), total=len(self.inference_result)):
             fault_detected[index] = row.top_1 >= self.threshold
 
         return fault_detected

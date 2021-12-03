@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 class ScoreBasedFaultDetector:
 
     def __init__(self, inference_result, threshold):
@@ -10,7 +12,7 @@ class ScoreBasedFaultDetector:
         :return: a dictionary {image_name: fault_detected}
         """
         fault_detected = {}
-        for index, row in self.inference_result.iterrows():
+        for index, row in tqdm(self.inference_result.iterrows(), total=len(self.inference_result)):
             fault_detected[index] = row.top_1 >= self.threshold
 
         return fault_detected
