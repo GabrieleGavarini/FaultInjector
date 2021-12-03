@@ -29,7 +29,7 @@ class FaultDetectorMetrics:
             threshold = pickle.load(open(file_location, 'rb'))
             return threshold
         except (OSError, IOError):
-            threshold = 0
+            threshold = [0, 10e6]
 
             for label_index, dir_name in enumerate(tqdm(os.listdir(self.dataset_dir))):
                 for image_index, file_name in enumerate(os.listdir(f'{self.dataset_dir}/{dir_name}')):
@@ -45,7 +45,7 @@ class FaultDetectorMetrics:
                     vector_score = list(self.network.predict(np.expand_dims(loaded_image, axis=0))[0])
 
                     # If the maximum of the vector score is bigger than the previous threshold update the threshold
-                    threshold = max(threshold, max(vector_score))
+                    threshold = [max(threshold[0], max(vector_score)), min(threshold[1], max(vector_score))]
 
             pickle.dump(threshold, open(file_location, 'wb'))
             return threshold

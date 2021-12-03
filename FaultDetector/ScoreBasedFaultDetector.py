@@ -13,6 +13,6 @@ class ScoreBasedFaultDetector:
         """
         fault_detected = {}
         for index, row in tqdm(self.inference_result.iterrows(), total=len(self.inference_result)):
-            fault_detected[index] = row.top_1 >= self.threshold
+            fault_detected[index] = row.top_1 >= self.threshold[0] | row.top_1 <= self.threshold[1]
 
         return fault_detected
