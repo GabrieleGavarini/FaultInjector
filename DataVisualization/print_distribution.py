@@ -19,7 +19,7 @@ def prepare_ax(ax, x_max, x_min, y_max, y_min):
 
 
 threshold = [51.71414 * 0.9,
-             5.3407907 * 1.3]
+             5.3407907 * 1.15]
 
 df_list = []
 for file_location in tqdm(os.listdir('../FaultyRunResults')):
@@ -58,14 +58,21 @@ prepare_ax(ax[0], x_min=0, x_max=len(top_non_faulty_values), y_min=0, y_max=50)
 ax[0].bar(x=top_non_faulty_values_over_threshold.index, height=top_non_faulty_values_over_threshold.values, width=1, color='orange', label='False Positive')
 ax[0].bar(x=top_non_faulty_values_under_threshold.index, height=top_non_faulty_values_under_threshold.values, width=1, color='blue', label='True Negative')
 ax[0].legend(loc='best')
+ax[0].set_xlabel('x - correct predictions')
+ax[0].set_ylabel('max(||A(x)||')
 
+# FPR: 0.10030%
 print(f'FPR: {100 * len(top_golden_values_over_threshold) / len(top_golden_values):.5f}%')
 
 prepare_ax(ax[1], x_min=0, x_max=len(top_faulty_values), y_min=0, y_max=50)
 ax[1].bar(x=top_faulty_values_over_threshold.index, height=top_faulty_values_over_threshold.values, width=1, color='green', label='True Positive')
 ax[1].bar(x=top_faulty_values_under_threshold.index, height=top_faulty_values_under_threshold.values, width=1, color='red', label='False Negative')
 ax[1].legend(loc='best')
+ax[1].set_xlabel('x - wrong predictions')
+ax[1].set_ylabel('max(||A(x)||')
 
+# FNR: 4.64%
 print(f'FNR: {100 * len(top_faulty_values_under_threshold) / len(top_faulty_values):.2f}%')
 
 fig.show()
+fig.savefig('Distribution')
