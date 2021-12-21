@@ -68,7 +68,8 @@ if __name__ == "__main__":
     network_manager.save_golden_results()
 
     # STEP 2 - Faulty Run
-    for seed in seed_list:
+    for count, seed in enumerate(seed_list):
+        print(f'Beginning run #{count} of {len(seed_list)}.\n')
         # 2.1 - reset the network to its original state (i.e. load the original weights)
         network_manager.reset_network()
         # 2.2 - Initialize the fault injector
