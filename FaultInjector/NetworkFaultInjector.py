@@ -88,7 +88,7 @@ class NetworkFaultInjector:
         if incremental_index > len(self.fault_list):
             raise OutOfFaultList('The index of the incremental is larger than the dimension of the fault list')
 
-        print(f'Injecting {increment_number} faults')
+        print(f'Injecting {incremental_index} faults')
 
         target_list = np.array(self.fault_list[self.index_last_injection: incremental_index])
         self.index_last_injection = incremental_index

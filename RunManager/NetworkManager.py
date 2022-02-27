@@ -103,8 +103,8 @@ class NetworkManager:
             sdc_metrics_entry['sdc-5'] = self.compute_sdc_n(5, entry_name, top_1_index)
         return sdc_metrics_entry
 
-    def run_and_export(self, run_name, output_dir, output_format='pickle', top_n=None, open_max_activation_vectors=None,
-                       compute_sdc_metrics=False, pre_processing_function=None):
+    def run_and_export(self, run_name, output_dir, output_format='pickle', top_n=None, compute_sdc_metrics=False,
+                       pre_processing_function=None, open_max_activation_vectors=None, open_max_weibull=None):
         """
         Run an inference of the network for the stored dataset, applying the specified pre-processing function. The run
         is then saved in the specified format in output_dir. If top_n is specified only the top_n values and relative
@@ -118,7 +118,7 @@ class NetworkManager:
         :param open_max_activation_vectors: Either None or a dictionary of vectors. The mean activation vectors of all
         the classes. The dictionary entry is a pair key data where the key is the class name and the data is the mean
         activation vector for that class.
-        :param compute_sdc_metrics: Whether or not to include the sdc metrics into the dataframe. Throws an exception if
+        :param compute_sdc_metrics: Whether to include the sdc metrics into the dataframe. Throws an exception if
         the golden run results are not defined.
         :param pre_processing_function: The pre-processing function to apply to the input dataset.
         :return returns the dataframe saved in the specified file
@@ -129,9 +129,14 @@ class NetworkManager:
 
         vector_score_list = {}
         open_max_distance = {}
+        open_max_unknown = {}
+        open_max_unknown_score = {}
         sdc_metrics = {}
 
-        for label_index, dir_name in enumerate(tqdm(os.listdir(self.dataset_dir))):
+        pbar = tqdm(os.listdir(self.dataset_dir))
+        pbar.set_description(f'Run {run_name}')
+
+        for label_index, dir_name in enumerate(pbar):
             for image_index, file_name in enumerate(os.listdir(f'{self.dataset_dir}/{dir_name}')):
 
                 # Load the image, resize it and perform a center crop
@@ -156,6 +161,24 @@ class NetworkManager:
                     # Compute the distance between the mav and the vector score (computed after the softmax)
                     distance = open_max_activation_vectors[dir_name] - special.softmax(vector_score)
                     open_max_distance[file_name] = np.linalg.norm(distance)
+                    if open_max_weibull is not None:
+                        open_max_vector_score = []
+                        open_max_unknown_vector_score = []
+                        for class_index, score in enumerate(vector_score):
+                            from scipy import stats
+                            class_distance = np.linalg.norm(list(open_max_activation_vectors.values())[class_index] - vector_score)
+                            c, loc, scale = open_max_weibull[dir_name]
+                            w_score = stats.weibull_min.pdf(x=class_distance, c=c, loc=loc, scale=scale)
+                            modified_score = score * (1 - w_score)
+                            open_max_vector_score.append(modified_score)
+                            open_max_unknown_vector_score.append(score - modified_score)
+
+                        total_denominator = np.exp(np.sum(open_max_unknown_vector_score)) + np.sum(np.exp(open_max_vector_score))
+                        open_max_score = np.exp(open_max_vector_score) / total_denominator
+                        open_max_score_unknown = np.exp(np.sum(open_max_unknown_vector_score)) / total_denominator
+
+                        open_max_unknown[file_name] = open_max_score_unknown > np.max(open_max_score)
+                        open_max_unknown_score[file_name] = open_max_score_unknown
 
                 if compute_sdc_metrics:
                     sdc_metrics[file_name] = self.compute_sdc_metrics(vector_score, file_name)
@@ -172,6 +195,9 @@ class NetworkManager:
         # Compute the distance from the mav
         if open_max_activation_vectors is not None:
             self.current_results['OpenMaxDistance'] = pd.Series(open_max_distance)
+            if open_max_weibull is not None:
+                self.current_results['OpenMaxUnknown'] = pd.Series(open_max_unknown)
+                self.current_results['OpenMaxUnknownScore'] = pd.Series(open_max_unknown_score)
 
         # Compute the sdc metrics
         if compute_sdc_metrics:
@@ -180,6 +206,7 @@ class NetworkManager:
             self.current_results['sdc-10%'] = pd.Series({key: info['sdc-10%'] for key, info in sdc_metrics.items()})
             self.current_results['sdc-20%'] = pd.Series({key: info['sdc-20%'] for key, info in sdc_metrics.items()})
 
+        os.makedirs(f'{output_dir}', exist_ok=True)
         if output_format == 'pickle':
             self.current_results.to_pickle(f'{output_dir}/{run_name}_inference_result.pkl')
         elif output_format == 'csv':

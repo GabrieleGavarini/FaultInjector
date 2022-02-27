@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 
+from scipy import stats
+
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
@@ -38,7 +40,11 @@ if __name__ == "__main__":
     generator_seed = 1234
     generator = np.random.default_rng(generator_seed)
 
+    list_beginning = 0
+    list_end = 100
+
     seed_list = generator.choice(int(10e6), size=number_of_experiments, replace=False)
+    seed_list = seed_list[list_beginning: list_end]
 
     # STEP 1 - Golden Run
     # 1.1 - Create the network
@@ -51,20 +57,28 @@ if __name__ == "__main__":
     metrics = FaultDetectorMetrics(network=vgg, dataset_dir=detection_dir)
     open_max_activation_vectors = metrics.compute_mean_activation_vectors(file_location=f'{mav_file_location}/mav.pkl',
                                                                           pre_processing_function=preprocess_input)
-    # open_max_threshold = metrics.compute_mav_distance_threshold(mav=open_max_activation_vectors,
-    #                                                             file_location=f'{mav_file_location}/distance.pkl',
-    #                                                             pre_processing_function=preprocess_input)
+    open_max_distances = metrics.compute_mav_distance(mav=open_max_activation_vectors,
+                                                      file_location=f'{mav_file_location}/distance.pkl',
+                                                      pre_processing_function=preprocess_input)
+
+    open_max_weibull = {}
+    for key, value in open_max_distances.items():
+        tailsize = 20
+        tailtofit = sorted(value)[-tailsize:]
+        open_max_weibull[key] = stats.weibull_min.fit(tailtofit)
+
     # score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
     #                                                               pre_processing_function=preprocess_input)
 
     # 1.4 - Execute the golden run
     print(f'Starting golden run... \n')
     network_manager.run_and_export(run_name=f'vgg_imagenet',
-                                   output_dir='GoldenRunResults',
+                                   output_dir='GoldenRunResults-OpenMax',
                                    top_n=top_n,
-                                   open_max_activation_vectors=open_max_activation_vectors,
                                    output_format=output_format,
-                                   pre_processing_function=preprocess_input)
+                                   pre_processing_function=preprocess_input,
+                                   open_max_activation_vectors=open_max_activation_vectors)
+
     network_manager.save_golden_results()
 
     # STEP 2 - Faulty Run
@@ -83,12 +97,13 @@ if __name__ == "__main__":
             # 2.4 - Execute a faulty run
             print(f'Starting faulty run {seed}_{number_of_faults}... \n')
             inference_results = network_manager.run_and_export(run_name=f'vgg_imagenet_{seed}_{number_of_faults}',
-                                                               output_dir='FaultyRunResults',
+                                                               output_dir='FaultyRunResults-OpenMax',
                                                                top_n=top_n,
-                                                               open_max_activation_vectors=open_max_activation_vectors,
                                                                compute_sdc_metrics=True,
                                                                output_format=output_format,
-                                                               pre_processing_function=preprocess_input)
+                                                               pre_processing_function=preprocess_input,
+                                                               open_max_activation_vectors=open_max_activation_vectors,
+                                                               open_max_weibull=open_max_weibull)
 
             # 2.5 - Initialize the fault detectors
             # score_based_fault_detector = ScoreBasedFaultDetector(inference_result=inference_results,
