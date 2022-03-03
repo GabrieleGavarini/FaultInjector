@@ -26,7 +26,7 @@ def prepare_ax(ax, x_max, x_min, y_max, y_min):
 #   FNR: 4.64%
 
 save_by_fault_number = False
-fault_metric = 'sdc-20%'
+fault_metric = 'sdc-1'
 threshold = [51.71414 * 0.9,
              5.3407907 * 1.45]
 
@@ -50,14 +50,17 @@ if save_by_fault_number:
     faulty_inference_results = faulty_inference_results[faulty_inference_results.FaultNumber == number_of_faults]
 
 top_golden_values = golden_inference_results.top_1.sort_values(ascending=False).reset_index(drop=True)
-top_golden_values_open_set = top_golden_values[(top_golden_values.values > threshold[0]) | (top_golden_values.values < threshold[1])]
+top_golden_values = golden_inference_results.iloc[top_golden_values.index.values]
+top_golden_values_open_set = top_golden_values[top_golden_values.OpenMaxUnknown]
 top_golden_values_under_threshold = top_golden_values.drop(top_golden_values_open_set.index)
 
 top_non_faulty_values = faulty_inference_results[~faulty_inference_results[fault_metric]][['top_1', 'OpenMaxUnknown']].sort_values(by='top_1', ascending=False).replace([np.inf, -np.inf], np.nan).dropna().reset_index(drop=True)
+top_non_faulty_values = faulty_inference_results.iloc[top_non_faulty_values.index.values.tolist()]
 top_non_faulty_values_over_threshold = top_non_faulty_values[top_non_faulty_values.OpenMaxUnknown]
 top_non_faulty_values_under_threshold = top_non_faulty_values.drop(top_non_faulty_values_over_threshold.index)
 
-top_faulty_values = faulty_inference_results[faulty_inference_results[fault_metric]][['top_1', 'OpenMaxUnknown']].sort_values(by='top_1', ascending=False).replace([np.inf, -np.inf], np.nan).dropna().reset_index(drop=True)
+top_faulty_values = faulty_inference_results[faulty_inference_results[fault_metric]][['top_1', 'OpenMaxUnknown', 'den']].sort_values(by='top_1', ascending=False).replace([np.inf, -np.inf], np.nan).dropna().reset_index(drop=True)
+top_faulty_values = faulty_inference_results.iloc[top_faulty_values.index.values.tolist()]
 top_faulty_values_over_threshold = top_faulty_values[top_faulty_values.OpenMaxUnknown]
 top_faulty_values_under_threshold = top_faulty_values.drop(top_faulty_values_over_threshold.index)
 

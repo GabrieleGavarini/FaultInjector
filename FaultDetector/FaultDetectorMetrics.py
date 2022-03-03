@@ -4,6 +4,7 @@ from tqdm import tqdm
 
 import numpy as np
 import pickle
+import libmr
 
 from RunManager.ImageLoader import ImageLoader
 
@@ -135,6 +136,25 @@ class FaultDetectorMetrics:
 
             pickle.dump(distance_dict, open(file_location, 'wb'))
             return distance_dict
+
+    @staticmethod
+    def fit_weibull(open_max_distances, tail_size=20):
+        """
+        Compute the weibull distribution based on the openmax distances. Use only the highest tail_size distances
+        :param open_max_distances: The distances used to fit the distribution
+        :param tail_size: The number of distances
+        :return:
+        """
+        weibull = {}
+
+        for key, value in tqdm(open_max_distances.items(), desc='Computing Weibull fit'):
+            tail_size = 20
+            tail_to_fit = sorted(value)[-tail_size:]
+            meta = libmr.MR()
+            meta.fit_high(tail_to_fit, len(tail_to_fit))
+            weibull[key] = meta
+
+        return weibull
 
     def compute_mav_distance_threshold(self, mav, pre_processing_function=None, file_location=None):
         """

@@ -1,8 +1,6 @@
 import sys
 import numpy as np
 
-from scipy import stats
-
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
@@ -61,11 +59,8 @@ if __name__ == "__main__":
                                                       file_location=f'{mav_file_location}/distance.pkl',
                                                       pre_processing_function=preprocess_input)
 
-    open_max_weibull = {}
-    for key, value in open_max_distances.items():
-        tailsize = 20
-        tailtofit = sorted(value)[-tailsize:]
-        open_max_weibull[key] = stats.weibull_min.fit(tailtofit)
+    open_max_weibull = metrics.fit_weibull(open_max_distances,
+                                           tail_size=20)
 
     # score_based_threshold = metrics.compute_score_based_threshold(file_location=threshold_file_location,
     #                                                               pre_processing_function=preprocess_input)
@@ -77,7 +72,8 @@ if __name__ == "__main__":
                                    top_n=top_n,
                                    output_format=output_format,
                                    pre_processing_function=preprocess_input,
-                                   open_max_activation_vectors=open_max_activation_vectors)
+                                   open_max_activation_vectors=open_max_activation_vectors,
+                                   open_max_weibull=open_max_weibull)
 
     network_manager.save_golden_results()
 

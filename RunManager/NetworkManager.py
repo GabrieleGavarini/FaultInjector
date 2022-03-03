@@ -165,10 +165,10 @@ class NetworkManager:
                         open_max_vector_score = []
                         open_max_unknown_vector_score = []
                         for class_index, score in enumerate(vector_score):
-                            from scipy import stats
                             class_distance = np.linalg.norm(list(open_max_activation_vectors.values())[class_index] - vector_score)
-                            c, loc, scale = open_max_weibull[dir_name]
-                            w_score = stats.weibull_min.pdf(x=class_distance, c=c, loc=loc, scale=scale)
+
+                            w_score = list(open_max_weibull.values())[class_index].w_score(class_distance)
+
                             modified_score = score * (1 - w_score)
                             open_max_vector_score.append(modified_score)
                             open_max_unknown_vector_score.append(score - modified_score)
